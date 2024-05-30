@@ -1,11 +1,11 @@
 /*
 (C) joukoy@gmail.com
-Bluetooth <=> ALDL + Wideband O2 analog signal interface For Arduino MEGA 2560
+Bluetooth <=> ALDL + Wideband O2 (analog) signal interface For Arduino MEGA 2560
 Connect PC, phone or tablet to your Bluetooth module and use Bluetooth serial port in your application (Tunerpro, ALDLDroid etc)
 
 Required parts:
 - Arduino Mega 2560 (or other Arduino model, need 2 free serial ports, or use softwareserial)
-- Bluetooth module, for example HC-06, HC-06, JPY-33
+- Bluetooth module, for example HC-05, HC-06 or JDY-33
 - 2 resistors, 100 ohm 
 
 Connections:
@@ -44,7 +44,7 @@ X*15.04/1023 + 7.35
 const byte WBPin = A0;
 const int AFRByte = 60;
 
-//Note: Setup bluetooth baudrate to 115200 OR modify speed to match BT module baudrate
+//Note: Setup bluetooth baudrate to 115200 OR modify BtBaudrate to match BT module baudrate
 //Modify Tunerpro Acquistion settings to match baudrate
 const unsigned long BtBaudrate = 115200; 
 bool verbose = false;
