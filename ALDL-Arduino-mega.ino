@@ -1,32 +1,33 @@
 /*
 (C) joukoy@gmail.com
-Bluetooth <=> ALDL + Wideband O2 (analog) signal interface For Arduino MEGA 2560
+Bluetooth <=> ALDL + Wideband O2 analog signal interface For Arduino MEGA 2560
 Connect PC, phone or tablet to your Bluetooth module and use Bluetooth serial port in your application (Tunerpro, ALDLDroid etc)
 
-Required parts:
+#Required parts:
 - Arduino Mega 2560 (or other Arduino model, need 2 free serial ports, or use softwareserial)
 - Bluetooth module, for example HC-05, HC-06 or JDY-33
 - 2 resistors, 100 ohm 
 
-Connections:
+#Connections:
 
-Mega --- Bluetooth module
+* Mega --- Bluetooth module *
 Gnd --- Gnd
 5v  --- Vcc
 TX2 --- RX
 RX2 --- TX
 
-Mega --- ALDL
+* Mega --- ALDL *
 Tx3 -resistor 100R-\
                     ---- ALDL pin M
 RX3 -resistor 100R-/
 GND --- ALDL Pin A
 Vin --- +12v when ign on (radio? Cigarette lighter?), or supply power to Arduino USB port
 
-Mega --- WB O2 sensor
+* Mega --- WB O2 sensor *
 Gnd --- Gnd
 A0  --- Analog out (0-5v)
 
+#App settings
 In tunerpro, add value for WB O2, use packet offset: 60, Source data size: 16 Bit 
 If bytes 60 & 61 are used for something important, modify AFRByte below and packet offset to something else than 60 
 
@@ -44,10 +45,11 @@ X*15.04/1023 + 7.35
 const byte WBPin = A0;
 const int AFRByte = 60;
 
-//Note: Setup bluetooth baudrate to 115200 OR modify BtBaudrate to match BT module baudrate
+//Note: Setup bluetooth module baudrate to 115200 OR modify BtBaudrate to match BT module baudrate
 //Modify Tunerpro Acquistion settings to match baudrate
 const unsigned long BtBaudrate = 115200; 
 bool verbose = false;
+bool echoCancel = true;
 
 void setup() {
   AldlSerial.begin (8192);
@@ -63,17 +65,24 @@ void loop() {
     if (Serial.available())
     {
       char cmd = Serial.read();
-      if (cmd != '\n' && cmd != '\r')
+      switch(cmd)
       {
-        if (cmd == 'v')
-        {
-          verbose = true;
-          Serial.println("Verbose mode on");
-        }
-        else
-        {
-          verbose = false;
-        }
+      case 'v':
+        verbose = true;
+        Serial.println("Verbose mode on");
+        break;
+      case 'w':
+        verbose = false;
+        Serial.println("Verbose mode off");
+        break;
+      case 'e':
+        echoCancel = true;
+        Serial.println("Echo cancelling on");
+        break;
+      case 'f':
+        echoCancel = false;
+        Serial.println("Echo cancelling off");
+        break;
       }
     }
     delay(2);
@@ -112,7 +121,7 @@ void loop() {
     }
   }
 
-  int AFR = analogRead(WBPin); 
+  int AFR = analogRead(WBPin);                          //Read WB voltage from analog pin (0-5v)
   if (verbose)
   {
     Serial.print("AFR: ");
@@ -120,23 +129,26 @@ void loop() {
   }
   while (AldlSerial.available() )                                          
   { 
-      while (AldlSerial.available() )                                     // Check for available data on the serial port
+      while (AldlSerial.available() )                    // Check for available data on the ALDL serial port
       {
         int dataByte = AldlSerial.read(); 
-        if (DataStreamIndex == (AFRByte + cmdLen + 3))   // AFRByte + Sent bytes count (sent bytes echo back) + 3 header bytes
+        if (DataStreamIndex == (AFRByte + cmdLen + 3))   // AFRByte + Sent bytes count (ALDL echo) + 3 header bytes
         {
-          dataByte = (byte)(AFR >> 8); 
+          dataByte = (byte)(AFR >> 8);                  //Replace byte with MSB byte of AFR value
         }
         else if (DataStreamIndex == (AFRByte + cmdLen + 4))
         {
-          dataByte = (byte)AFR;
+          dataByte = (byte)AFR;                       //Replace byte with LSB byte of AFR value
         }
         if (verbose)
         {
           Serial.print(dataByte, HEX);
           Serial.print(" ");
         }
-        BtSerial.write(dataByte); 
+        if (echoCancel == false || DataStreamIndex >= cmdLen) //Skip echo bytes if echoCancel = true
+        {
+          BtSerial.write(dataByte); 
+        }
         DataStreamIndex++;                                          
       }     
       delay(3);
@@ -145,7 +157,6 @@ void loop() {
   {
     Serial.println(" ");
   }
-
 
 }
 
